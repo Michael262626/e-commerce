@@ -78,7 +78,7 @@ export default function ContactPage() {
                 <Phone className="h-5 w-5 text-gray-500 mt-0.5" />
                 <div>
                   <h3 className="font-medium">Phone</h3>
-                  <p className="text-gray-500 dark:text-gray-400">+1 (234) 567-8900</p>
+                  <p className="text-gray-500 dark:text-gray-400">+ 234 805-611-2316</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -93,11 +93,11 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-medium">Address</h3>
                   <p className="text-gray-500 dark:text-gray-400">
-                    123 Industrial Parkway
+                    4 Irepodun Street
                     <br />
-                    Manufacturing District
+                    Olorunshogo Alabede Area
                     <br />
-                    New York, NY 10001
+                    Aboru, Lagos
                   </p>
                 </div>
               </div>

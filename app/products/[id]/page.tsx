@@ -86,7 +86,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
             <div className="flex items-center gap-2 mt-2">
               <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">Or call us at: +1 (234) 567-8900</span>
+              <span className="text-gray-500">Or call us at: + 234 8056112316</span>
             </div>
           </div>
         </div>

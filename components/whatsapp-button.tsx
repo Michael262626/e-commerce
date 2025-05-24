@@ -20,7 +20,7 @@ export default function WhatsAppButton({
   size = "default",
   className,
 }: WhatsAppButtonProps) {
-  const phoneNumber = "1234567890" // Replace with your actual WhatsApp number
+  const phoneNumber = "07060922125" // Replace with your actual WhatsApp number
 
   const handleWhatsAppClick = () => {
     const message = productName

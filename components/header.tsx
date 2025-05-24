@@ -33,7 +33,7 @@ export default function Header() {
         <div className="container px-4 md:px-6">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
-              <span>📞 +1 (234) 567-8900</span>
+              <span>📞 + 234 805-611-2316</span>
               <span className="hidden md:inline">✉️ info@industrialmachinery.com</span>
             </div>
             <div className="flex items-center gap-4">
