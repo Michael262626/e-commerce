@@ -307,9 +307,24 @@ export const getRelatedProducts = (currentId: string, limit = 4): Product[] => {
   return [...sameCategory, ...otherProducts].slice(0, limit)
 }
 
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = (error) => reject(error)
+  })
+
 // Add a new product
-export const addProduct = (product: Product): void => {
+export const addProduct = async (product: Product): Promise<void> => {
   const products = getStoredProducts()
+
+  // If imageFile is provided, convert it to base64
+  if (product.imageFile) {
+    product.imageUrl = await fileToBase64(product.imageFile)
+    product.imageFile = null // no need to store file object
+  }
+
   products.push(product)
   saveProducts(products)
 }

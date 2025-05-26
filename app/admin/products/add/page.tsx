@@ -313,6 +313,10 @@ export default function AddProductPage() {
           const imageUrl = URL.createObjectURL(file);
           handleInputChange("imageFile", file); // store File object
           handleInputChange("imageUrl", imageUrl); // for preview
+
+          const img = new Image();
+          img.src = imageUrl;
+          img.onload = () => URL.revokeObjectURL(imageUrl);
         }
       }}
     />

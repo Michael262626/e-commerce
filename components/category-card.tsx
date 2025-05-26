@@ -17,7 +17,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
 
   return (
     <Link href={category.href}>
-      <div className="group flex flex-col items-center p-4 rounded-xl bg-white hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-100">
+      <div className="group flex flex-col text-black items-center p-4 rounded-xl bg-white hover:bg-primary hover:text-white transition-all duration-300 shadow-sm hover:shadow-md border border-gray-100">
         <div className="rounded-full bg-primary/10 group-hover:bg-white/20 p-3 mb-3 transition-colors">
           <Icon className="h-6 w-6 text-primary group-hover:text-white" />
         </div>

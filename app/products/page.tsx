@@ -15,8 +15,8 @@ import ProductCard from "@/components/product-card"
 import { getAllProducts, getProductCategories } from "@/lib/products"
 
 export default function ProductsPage() {
-  const products = getAllProducts()
-  const categories = getProductCategories()
+  const [products] = useState(getAllProducts())
+  const [categories] = useState(getProductCategories())
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])

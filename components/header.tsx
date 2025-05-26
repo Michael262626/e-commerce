@@ -34,7 +34,7 @@ export default function Header() {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
               <span>📞 + 234 805-611-2316</span>
-              <span className="hidden md:inline">✉️ info@industrialmachinery.com</span>
+              <span className="hidden md:inline">✉️ adeosuntesleem@gmail.com</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="hidden md:inline">🚚 Free Delivery on Orders $50,000+</span>

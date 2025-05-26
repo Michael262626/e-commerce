@@ -85,7 +85,7 @@ export default function ContactPage() {
                 <Mail className="h-5 w-5 text-gray-500 mt-0.5" />
                 <div>
                   <h3 className="font-medium">Email</h3>
-                  <p className="text-gray-500 dark:text-gray-400">info@nylonmachinery.com</p>
+                  <p className="text-gray-500 dark:text-gray-400">adeosuntesleem@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

@@ -123,7 +123,7 @@ export default function AdminProductsPage() {
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
                         <img
-                          src={product.image || "/placeholder.svg?height=64&width=64"}
+                          src={product.imageUrl || "/placeholder.svg?height=64&width=64"}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />

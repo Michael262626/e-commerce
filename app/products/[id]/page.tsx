@@ -33,7 +33,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <div className="grid gap-8 md:grid-cols-2">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
           <Image
-            src={product.image || "/placeholder.svg?height=600&width=600"}
+            src={product.imageUrl || "/placeholder.svg?height=600&width=600"}
             alt={product.name}
             fill
             className="object-cover"

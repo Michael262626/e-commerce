@@ -12,7 +12,7 @@ interface Product {
   name: string
   description: string
   category: string
-  image?: string
+  imageUrl?: string
   featured?: boolean
   price?: string
   originalPrice?: string
@@ -34,7 +34,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
         <div className="flex">
           <div className="relative w-48 h-32 flex-shrink-0">
             <Image
-              src={product.image || "/placeholder.svg?height=400&width=400"}
+              src={product.imageUrl || "/placeholder.svg?height=400&width=400"}
               alt={product.name}
               fill
               className="object-cover"
@@ -108,7 +108,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
       <div className="relative aspect-square overflow-hidden bg-muted/30">
         <Image
-          src={product.image || "/placeholder.svg?height=400&width=400"}
+          src={product.imageUrl || "/placeholder.svg?height=400&width=400"}
           alt={product.name}
           fill
           className="object-cover transition-transform group-hover:scale-105"
