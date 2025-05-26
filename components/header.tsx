@@ -38,7 +38,7 @@ export default function Header() {
             </div>
             <div className="flex items-center gap-4">
               <span className="hidden md:inline">🚚 Free Delivery on Orders $50,000+</span>
-              <Link href="/admin" className="hover:text-accent">
+              <Link href="/auth/login" className="hover:text-accent">
                 Admin
               </Link>
             </div>

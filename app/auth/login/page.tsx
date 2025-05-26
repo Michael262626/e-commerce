@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { Eye, EyeOff, Lock, LogOut, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { login } from "@/lib/auth"
+
+let logoutTimer: NodeJS.Timeout
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -30,18 +32,22 @@ export default function LoginPage() {
       const result = await login(email, password)
 
       if (result.success) {
+        // Start 5-minute auto-logout timer
+        logoutTimer = setTimeout(() => {
+          toast({
+            title: "Logged Out",
+            description: "You have been logged out due to inactivity.",
+          })
+          router.push("/auth/login")
+        }, 5 * 60 * 1000) 
+      
         router.push("/admin")
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         })
-      } else {
-        toast({
-          title: "Login Failed",
-          description: result.error || "Invalid credentials",
-          variant: "destructive",
-        })
       }
+      
     } catch (error) {
       toast({
         title: "Error",
