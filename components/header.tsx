@@ -47,7 +47,7 @@ export default function Header() {
       </div>
 
       {/* Main Header */}
-      <div className="border-b">
+      <div className="">
         <div className="container flex h-16 items-center justify-between px-4 md:px-6">
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>

@@ -68,7 +68,7 @@ export default function Home() {
       </section>
 
       {/* Search Section */}
-      <section className="w-full py-8 bg-white border-b">
+      <section className="w-full py-8 bg-white">
         <div className="container px-4 md:px-6">
           <SearchBar />
         </div>
