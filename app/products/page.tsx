@@ -17,7 +17,6 @@ import { getAllProducts, getProductCategories } from "@/lib/products"
 export default function ProductsPage() {
   const [products] = useState(getAllProducts())
   const [categories] = useState(getProductCategories())
-
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState([0, 100000])
@@ -28,7 +27,7 @@ export default function ProductsPage() {
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((product) => {
-      // Search filter
+      // Search filte
       if (
         searchQuery &&
         !product.name.toLowerCase().includes(searchQuery.toLowerCase()) &&

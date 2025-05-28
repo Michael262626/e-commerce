@@ -13,7 +13,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Industrial Machinery - Nylon Production Equipment",
   description: "High-quality industrial machinery for nylon production. Professional equipment with expert support.",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
