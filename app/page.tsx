@@ -42,9 +42,9 @@ export default function Home() {
                   </Button>
                 </Link>
                 <Link href="/contact">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8">
+                  <Button size="lg" variant="outline" className="border-white text-black hover:bg-white/10 px-8">
                     Get Quote
-                    <Phone className="ml-2 h-5 w-5" />
+                    <Phone className="ml-2 text-black h-5 w-5" />
                   </Button>
                 </Link>
               </div>
