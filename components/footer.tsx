@@ -7,8 +7,8 @@ export default function Footer() {
       <div className="container px-4 py-12 md:px-6 md:py-16">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-2">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-              <Factory className="h-6 w-6" />
+            <Link href="/" className="flex text-accent items-center gap-2 font-bold text-xl">
+              <Factory className="h-6 w-6 text-accent" />
               <span>APP</span>
             </Link>
             <p className="text-sm text-muted-foreground">
