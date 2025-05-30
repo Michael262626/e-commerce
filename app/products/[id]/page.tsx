@@ -1,24 +1,52 @@
-"use client"
+// app/products/[id]/page.tsx
+import Link from "next/link";
+import Image from "next/image";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ChevronRight, Phone } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import WhatsAppButton from "@/components/whatsapp-button";
+import ProductCard from "@/components/product-card";
+import { Product } from "@/types/product";
 
-import React from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { notFound } from "next/navigation"
-import { ArrowLeft, ChevronRight, Phone } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import WhatsAppButton from "@/components/whatsapp-button"
-import { getProductById, getRelatedProducts } from "@/lib/products"
-import ProductCard from "@/components/product-card"
+async function getProductById(id: string): Promise<Product | null> {
+  try {
+    const response = await fetch(`http://localhost:3000/api/products/${id}`, {
+      next: { revalidate: 60 }, // Optional: Cache for 60 seconds
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    return null;
+  }
+}
 
-export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = React.use(params)
+async function getRelatedProducts(id: string): Promise<Product[]> {
+  try {
+    const response = await fetch(`http://localhost:3000/api/products/related?excludeId=${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching related products:", error);
+    return [];
+  }
+}
 
-  const product = getProductById(id)
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params; // Await params
+  const product = await getProductById(id); // Await product fetch
+
   if (!product) {
-    notFound()
+    notFound();
   }
 
-  const relatedProducts = getRelatedProducts(id)
+  const relatedProducts = await getRelatedProducts(id); // Await related products
 
   return (
     <div className="container px-4 py-12 md:px-6 md:py-16">
@@ -33,7 +61,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <div className="grid gap-8 md:grid-cols-2">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
           <Image
-            src={product.imageUrl || "/placeholder.svg?height=600&width=600"}
+            src={product.image || "/placeholder.svg?height=600&width=600"} // Changed to image
             alt={product.name}
             fill
             className="object-cover"
@@ -52,7 +80,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <h3>Description</h3>
             <p>{product.description}</p>
 
-            {product.features && (
+            {product.features?.length > 0 && (
               <>
                 <h3>Key Features</h3>
                 <ul>
@@ -63,7 +91,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               </>
             )}
 
-            {product.specifications && (
+            {product.specifications && Object.keys(product.specifications).length > 0 && (
               <>
                 <h3>Technical Specifications</h3>
                 <ul>
@@ -86,7 +114,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
             <div className="flex items-center gap-2 mt-2">
               <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">Or call us at: + 234 8056112316</span>
+              <span className="text-gray-500">Or call us at: +234 8056112316</span>
             </div>
           </div>
         </div>
@@ -113,5 +141,5 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         </div>
       )}
     </div>
-  )
+  );
 }

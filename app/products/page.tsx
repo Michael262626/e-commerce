@@ -1,105 +1,171 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { Filter, Grid, List, SlidersHorizontal } from "lucide-react"
+import { useEffect, useState, useMemo } from "react";
+import { Filter, Grid, List, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useToast } from "@/components/ui/use-toast";
+import ProductCard from "@/components/product-card";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import ProductCard from "@/components/product-card"
-import { getAllProducts, getProductCategories } from "@/lib/products"
+// Define Product interface based on Prisma schema
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string | null;
+  originalPrice: string | null;
+  image: string | null;
+  cloudinaryPublicId: string | null;
+  features: string[];
+  specifications: Record<string, string>;
+  featured: boolean;
+  inStock: boolean;
+  discount: number;
+  rating: number;
+  reviews: number;
+  createdAt: Date;
+}
+
+// Define Category interface
+interface Category {
+  name: string;
+  count: number;
+}
 
 export default function ProductsPage() {
-  const [products] = useState(getAllProducts())
-  const [categories] = useState(getProductCategories())
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState([0, 100000])
-  const [sortBy, setSortBy] = useState("featured")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [inStockOnly, setInStockOnly] = useState(false)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState([0, 100000]);
+  const [sortBy, setSortBy] = useState("featured");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Fetch products and categories on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch products
+        const productsResponse = await fetch("/api/products");
+        if (!productsResponse.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const productsData = await productsResponse.json();
+        setProducts(productsData);
+
+        // Fetch categories
+        const categoriesResponse = await fetch("/api/products/categories");
+        if (!categoriesResponse.ok) {
+          throw new Error("Failed to fetch categories");
+        }
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load products or categories. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((product) => {
-      // Search filte
+    const filtered = products.filter((product: Product) => {
+      // Search filter
       if (
         searchQuery &&
         !product.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !product.description.toLowerCase().includes(searchQuery.toLowerCase())
       ) {
-        return false
+        return false;
       }
 
       // Category filter
       if (selectedCategories.length > 0 && !selectedCategories.includes(product.category)) {
-        return false
+        return false;
       }
 
       // Stock filter
       if (inStockOnly && !product.inStock) {
-        return false
+        return false;
       }
 
       // Price filter (extract numeric value from price string)
       if (product.price) {
-        const price = Number.parseInt(product.price.replace(/[^0-9]/g, ""))
+        const price = Number.parseInt(product.price.replace(/[^0-9]/g, ""));
         if (price < priceRange[0] || price > priceRange[1]) {
-          return false
+          return false;
         }
       }
 
-      return true
-    })
+      return true;
+    });
 
     // Sort products
     switch (sortBy) {
       case "price-low":
-        filtered.sort((a, b) => {
-          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0
-          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0
-          return priceA - priceB
-        })
-        break
+        filtered.sort((a: Product, b: Product) => {
+          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0;
+          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0;
+          return priceA - priceB;
+        });
+        break;
       case "price-high":
-        filtered.sort((a, b) => {
-          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0
-          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0
-          return priceB - priceA
-        })
-        break
+        filtered.sort((a: Product, b: Product) => {
+          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0;
+          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0;
+          return priceB - priceA;
+        });
+        break;
       case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        break
+        filtered.sort((a: Product, b: Product) => b.rating - a.rating);
+        break;
       case "newest":
-        filtered.sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime())
-        break
+        filtered.sort((a: Product, b: Product) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        break;
       default:
-        filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+        filtered.sort((a: Product, b: Product) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
 
-    return filtered
-  }, [products, searchQuery, selectedCategories, priceRange, sortBy, inStockOnly])
+    return filtered;
+  }, [products, searchQuery, selectedCategories, priceRange, sortBy, inStockOnly]);
 
   const handleCategoryChange = (category: string, checked: boolean) => {
     if (checked) {
-      setSelectedCategories([...selectedCategories, category])
+      setSelectedCategories([...selectedCategories, category]);
     } else {
-      setSelectedCategories(selectedCategories.filter((c) => c !== category))
+      setSelectedCategories(selectedCategories.filter((c) => c !== category));
     }
-  }
+  };
 
   const FilterContent = () => (
     <div className="space-y-6">
       {/* Search */}
       <div className="space-y-2">
         <Label>Search Products</Label>
-        <Input placeholder="Search machinery..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+        <Input
+          placeholder="Search machinery..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       {/* Categories */}
@@ -142,8 +208,11 @@ export default function ProductsPage() {
 
       {/* Stock Filter */}
       <div className="flex items-center space-x-2">
-        <Checkbox id="inStock" checked={inStockOnly}   onCheckedChange={(checked) => setInStockOnly(checked === true)}
- />
+        <Checkbox
+          id="inStock"
+          checked={inStockOnly}
+          onCheckedChange={(checked) => setInStockOnly(checked === true)}
+        />
         <Label htmlFor="inStock" className="text-sm">
           In Stock Only
         </Label>
@@ -154,16 +223,24 @@ export default function ProductsPage() {
         variant="outline"
         className="w-full"
         onClick={() => {
-          setSearchQuery("")
-          setSelectedCategories([])
-          setPriceRange([0, 100000])
-          setInStockOnly(false)
+          setSearchQuery("");
+          setSelectedCategories([]);
+          setPriceRange([0, 100000]);
+          setInStockOnly(false);
         }}
       >
         Clear All Filters
       </Button>
     </div>
-  )
+  );
+
+  if (isLoading) {
+    return (
+      <div className="container px-4 py-8 md:px-6">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container px-4 py-8 md:px-6">
@@ -194,7 +271,7 @@ export default function ProductsPage() {
               </Select>
 
               {/* View Mode */}
-              <div className="flex border rounded-lg">
+              <div className="flex border rounded-md">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
                   size="sm"
@@ -255,10 +332,10 @@ export default function ProductsPage() {
                   variant="outline"
                   className="mt-4"
                   onClick={() => {
-                    setSearchQuery("")
-                    setSelectedCategories([])
-                    setPriceRange([0, 100000])
-                    setInStockOnly(false)
+                    setSearchQuery("");
+                    setSelectedCategories([]);
+                    setPriceRange([0, 100000]);
+                    setInStockOnly(false);
                   }}
                 >
                   Clear Filters
@@ -279,5 +356,5 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

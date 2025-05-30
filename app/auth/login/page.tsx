@@ -39,7 +39,7 @@ export default function LoginPage() {
             description: "You have been logged out due to inactivity.",
           })
           router.push("/auth/login")
-        }, 5 * 60 * 1000) 
+        }, 10 * 60 * 1000) 
       
         router.push("/admin")
         toast({

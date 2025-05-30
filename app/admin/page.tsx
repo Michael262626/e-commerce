@@ -1,53 +1,99 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { BarChart3, Package, ShoppingCart, Users, TrendingUp } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { BarChart3, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { getAllProducts } from "@/lib/products"
-import { useToast } from "@/components/ui/use-toast"
-import Link from "next/link"
-import { getCurrentUser } from "@/lib/auth"
+// Define Product interface based on Prisma schema
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string | null;
+  originalPrice: string | null;
+  image: string | null;
+  cloudinaryPublicId: string | null;
+  features: string[];
+  specifications: Record<string, string>;
+  featured: boolean;
+  inStock: boolean;
+  discount: number;
+  rating: number;
+  reviews: number;
+  createdAt: Date;
+}
+
+// Define User interface (adjust based on getCurrentUser return value)
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  // Add other fields as needed
+}
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const { toast } = useToast()
-  const products = getAllProducts()
+  const [user, setUser] = useState<User | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const currentUser = getCurrentUser()
-    if (!currentUser) {
-      toast({
-        title: "Access Denied",
-        description: "You need admin privileges to access this page",
-        variant: "destructive",
-      })
-      router.push("/auth/login")
-      return
-    }
-    setUser(currentUser)
-    setIsLoading(false)
-  }, [router, toast])
+    const fetchData = async () => {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        toast({
+          title: "Access Denied",
+          description: "You need admin privileges to access this page",
+          variant: "destructive",
+        });
+        router.push("/auth/login");
+        return;
+      }
+      setUser(currentUser);
+
+      try {
+        const response = await fetch("/api/products");
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const data = await response.json();
+        setProducts(data); // Set resolved products
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load products. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router, toast]);
 
   const handleLogout = () => {
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out",
-    })
-    router.push("/")
-  }
+    });
+    router.push("/");
+  };
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="container px-4 py-12 md:px-6 md:py-16">
         <div className="text-center">Loading...</div>
       </div>
-    )
+    );
   }
 
   const stats = {
@@ -55,7 +101,7 @@ export default function AdminDashboard() {
     featuredProducts: products.filter((p) => p.featured).length,
     inStockProducts: products.filter((p) => p.inStock).length,
     outOfStockProducts: products.filter((p) => !p.inStock).length,
-  }
+  };
 
   return (
     <div className="container px-4 py-12 md:px-6 md:py-16">
@@ -64,7 +110,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-secondary">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {user?.name}</p>
+            <p className="text-muted-foreground">Welcome back, {user.name}</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge className="bg-primary/10 text-primary">Admin</Badge>
@@ -198,34 +244,45 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {products.slice(0, 5).map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                      <Package className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">{product.category}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {product.featured && <Badge>Featured</Badge>}
-                    <Badge variant={product.inStock ? "default" : "destructive"}>
-                      {product.inStock ? "In Stock" : "Out of Stock"}
-                    </Badge>
-                    <Link href={`/admin/products/edit/${product.id}`}>
-                      <Button variant="outline" size="sm">
-                        Edit
-                      </Button>
-                    </Link>
-                  </div>
+              {products.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No products found</p>
                 </div>
-              ))}
+              ) : (
+                products
+                  .slice(0, 5)
+                  .map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                          <Package className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground">{product.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {product.featured && <Badge>Featured</Badge>}
+                        <Badge variant={product.inStock ? "default" : "destructive"}>
+                          {product.inStock ? "In Stock" : "Out of Stock"}
+                        </Badge>
+                        <Link href={`/admin/products/edit/${product.id}`}>
+                          <Button variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }

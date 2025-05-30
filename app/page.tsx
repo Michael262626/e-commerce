@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import ProductCard from "@/components/product-card"
 import CategoryCard from "@/components/category-card"
 import SearchBar from "@/components/search-bar"
-import { getFeaturedProducts, getProductCategories } from "@/lib/products"
+import { getFeaturedProducts } from "@/services/products"
+import { getProductCategories } from "@/data/categoryData"
 
 export default function Home() {
   const featuredProducts = getFeaturedProducts()

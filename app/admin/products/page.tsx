@@ -1,60 +1,129 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Edit, Plus, Trash, Eye, Star } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Edit, Plus, Trash, Eye, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { getCurrentUser } from "@/lib/auth";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
-import { getAllProducts, removeProduct } from "@/lib/products"
-import { getCurrentUser } from "@/lib/auth"
+// Define Product interface based on Prisma schema
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string | null;
+  originalPrice: string | null;
+  imageUrl: string | null;
+  imageFile: File | null;
+  videoFile: File | null;
+  videoUrl: string;
+  cloudinaryPublicId: string | null;
+  features: string[];
+  specifications: Record<string, string>;
+  featured: boolean;
+  inStock: boolean;
+  discount: number;
+  rating: number;
+  reviews: number;
+}
 
 export default function AdminProductsPage() {
-  const [user, setUser] = useState<any>(null)
-  const [products, setProducts] = useState<any[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const router = useRouter()
-  const { toast } = useToast()
+  const [user, setUser] = useState<any>(null); // TODO: Define User type
+  const [products, setProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const currentUser = getCurrentUser()
-    if (!currentUser) {
-      router.push("/auth/login")
-      return
-    }
-    setUser(currentUser)
-    setProducts(getAllProducts())
-  }, [router])
+    const fetchData = async () => {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        toast({
+          title: "Access Denied",
+          description: "You need admin privileges to access this page",
+          variant: "destructive",
+        });
+        router.push("/auth/login");
+        return;
+      }
+      setUser(currentUser);
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      removeProduct(id)
-      setProducts(getAllProducts())
+      try {
+        const response = await fetch("/api/products/get");
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const data = await response.json();
+        if (data.success && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          throw new Error(data.error || "Invalid response format");
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load products. Please try again.",
+          variant: "destructive",
+        });
+        setProducts([]); // Ensure products is an array on error
+      }
+    }
+
+    fetchData();
+  }, [router, toast])
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete product");
+      }
+      // Refetch products to update the list
+      const updatedResponse = await fetch("/api/products");
+      if (!updatedResponse.ok) {
+        throw new Error("Failed to refresh products");
+      }
+      const updatedData = await updatedResponse.json();
+      setProducts(updatedData);
       toast({
         title: "Product Deleted",
         description: `${name} has been removed from the catalog`,
-      })
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter
-    return matchesSearch && matchesCategory
-  })
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
-  const categories = [...new Set(products.map((p) => p.category))]
+  const categories = [...new Set(products.map((p) => p.category))];
 
   if (!user) {
-    return <div className="container px-4 py-12">Loading...</div>
+    return <div className="container px-4 py-12">Loading...</div>;
   }
 
   return (
@@ -123,7 +192,7 @@ export default function AdminProductsPage() {
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
                         <img
-                          src={product.imageUrl || "/placeholder.svg?height=64&width=64"}
+                          src={product.imageUrl || product.videoFile || "/placeholder.svg?height=64&width=64"}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
@@ -153,7 +222,11 @@ export default function AdminProductsPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id, product.name)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(product.id, product.name)}
+                      >
                         <Trash className="h-4 w-4" />
                       </Button>
                     </div>
@@ -165,5 +238,5 @@ export default function AdminProductsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -15,3 +15,22 @@ model User {
   password  String
   createdAt DateTime @default(now())
 }
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  category        String
+  price           String?
+  originalPrice   String?
+  image           String?
+  cloudinaryPublicId String?
+  features        String[] @default([])
+  specifications  Json?
+  featured        Boolean  @default(false)
+  inStock         Boolean  @default(true)
+  discount        Int      @default(0)
+  rating          Float    @default(0)
+  reviews         Int      @default(0)
+  createdAt       DateTime @default(now())
+}

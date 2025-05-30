@@ -1,46 +1,83 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Plus, Upload, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { getCurrentUser } from "@/lib/auth";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Plus, Upload, X } from "lucide-react"
+// Validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_DURATION = 15; // 15 seconds
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm"];
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/components/ui/use-toast"
-import { addProduct } from "@/lib/products"
-import { getCurrentUser } from "@/lib/auth"
+interface ProductData {
+  name: string;
+  description: string;
+  category: string;
+  price: string | null;
+  originalPrice: string | null;
+  image: string | null; // Align with types/product.ts
+  imageFile: File | null;
+  imageUrl: string; // For preview only
+  videoFile: File | null;
+  videoUrl: string; // For preview only
+  cloudinaryPublicId: string | null;
+  features: string[];
+  specifications: {
+    Dimensions: string;
+    Weight: string;
+    Power: string;
+    Capacity: string;
+    Speed: string;
+    Warranty: string;
+  };
+  featured: boolean;
+  inStock: boolean;
+  discount: number;
+  rating: number;
+  reviews: number;
+}
 
 export default function AddProductPage() {
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
+  const mediaUrls = useRef<string[]>([]); // Track object URLs for cleanup
 
-  const [productData, setProductData] = useState({
+  const [productData, setProductData] = useState<ProductData>({
     name: "",
     description: "",
     category: "",
-    price: "",
-    originalPrice: "",
-    image: "",
+    price: null,
+    originalPrice: null,
+    image: null,
+    imageFile: null,
     imageUrl: "",
-    imageFile: null as File | null,
+    videoFile: null,
+    videoUrl: "",
+    cloudinaryPublicId: null,
     features: [""],
     specifications: {
       Dimensions: "",
       Weight: "",
       Power: "",
       Capacity: "",
-      Material: "",
+      Speed: "",
       Warranty: "",
     },
     featured: false,
@@ -48,21 +85,29 @@ export default function AddProductPage() {
     discount: 0,
     rating: 0,
     reviews: 0,
-  })
+  });
 
   useEffect(() => {
-    const currentUser = getCurrentUser()
+    const currentUser = getCurrentUser();
     if (!currentUser) {
       toast({
         title: "Access Denied",
         description: "You need admin privileges to access this page",
         variant: "destructive",
-      })
-      router.push("/auth/login")
-      return
+      });
+      router.push("/auth/login");
+      return;
     }
-    setUser(currentUser)
-  }, [router, toast])
+    setUser(currentUser);
+  }, [router, toast]);
+
+  useEffect(() => {
+    // Cleanup object URLs on unmount
+    return () => {
+      mediaUrls.current.forEach((url) => URL.revokeObjectURL(url));
+      mediaUrls.current = [];
+    };
+  }, []);
 
   const categories = [
     "Spinning Machines",
@@ -73,153 +118,354 @@ export default function AddProductPage() {
     "Mixing Equipment",
     "Cutting Machines",
     "Packaging Equipment",
-  ]
+  ];
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = useCallback((field: keyof ProductData, value: any) => {
     setProductData((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  }, []);
 
-  const handleSpecificationChange = (key: string, value: string) => {
+  const validateFile = async (file: File): Promise<string | null> => {
+    if (file.size > MAX_FILE_SIZE) {
+      return `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`;
+    }
+    if (file.size === 0) {
+      return "File is empty or corrupted";
+    }
+
+    const isVideo = file.type.startsWith("video/");
+    if (isVideo && !ALLOWED_VIDEO_TYPES.includes(file.type)) {
+      return `Invalid video format. Please use ${ALLOWED_VIDEO_TYPES.join(", ")}`;
+    }
+    if (!isVideo && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return `Invalid image format. Please use ${ALLOWED_IMAGE_TYPES.join(", ")}`;
+    }
+
+    if (isVideo) {
+      try {
+        const video = document.createElement("video");
+        const url = URL.createObjectURL(file);
+        video.src = url;
+        await new Promise((resolve, reject) => {
+          video.onloadedmetadata = resolve;
+          video.onerror = () => reject(new Error("Error processing video"));
+          video.onstalled = () => reject(new Error("Video data stalled"));
+        });
+        if (video.duration > MAX_VIDEO_DURATION) {
+          URL.revokeObjectURL(url);
+          return `Video duration exceeds ${MAX_VIDEO_DURATION} seconds`;
+        }
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        return "Error processing video";
+      }
+    } else {
+      try {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.src = url;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error("Error processing image"));
+        });
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        return "Error processing image";
+      }
+    }
+
+    return null;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setMediaLoading(true);
+    setMediaError(null);
+
+    const validationError = await validateFile(file);
+    if (validationError) {
+      setMediaError(validationError);
+      setMediaLoading(false);
+      return;
+    }
+
+    // Revoke previous URLs
+    mediaUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    mediaUrls.current = [];
+
+    const isVideo = file.type.startsWith("video/");
+    const mediaUrl = URL.createObjectURL(file);
+    mediaUrls.current.push(mediaUrl);
+
+    if (isVideo) {
+      handleInputChange("videoFile", file);
+      handleInputChange("videoUrl", mediaUrl);
+      handleInputChange("imageFile", null);
+      handleInputChange("imageUrl", "");
+      handleInputChange("image", null);
+      handleInputChange("cloudinaryPublicId", null);
+    } else {
+      handleInputChange("imageFile", file);
+      handleInputChange("imageUrl", mediaUrl);
+      handleInputChange("videoFile", null);
+      handleInputChange("videoUrl", "");
+      handleInputChange("image", null);
+      handleInputChange("cloudinaryPublicId", null);
+    }
+
+    setMediaLoading(false);
+  };
+
+  const handleRemoveMedia = async () => {
+    if (productData.cloudinaryPublicId) {
+      try {
+        const response = await fetch("/api/products/delete-media", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ publicId: productData.cloudinaryPublicId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete media");
+        }
+
+        toast({
+          title: "Success",
+          description: "Media removed from Cloudinary.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete media from Cloudinary.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    // Revoke object URLs
+    mediaUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    mediaUrls.current = [];
+
     setProductData((prev) => ({
       ...prev,
-      specifications: {
-        ...prev.specifications,
-        [key]: value,
-      },
-    }))
-  }
+      image: null,
+      imageUrl: "",
+      imageFile: null,
+      videoUrl: "",
+      videoFile: null,
+      cloudinaryPublicId: null,
+    }));
+    setMediaError(null);
+  };
 
   const handleFeatureChange = (index: number, value: string) => {
-    const updatedFeatures = [...productData.features]
-    updatedFeatures[index] = value
-    setProductData((prev) => ({
-      ...prev,
-      features: updatedFeatures,
-    }))
-  }
+    const updatedFeatures = [...productData.features];
+    updatedFeatures[index] = value;
+    handleInputChange("features", updatedFeatures);
+  };
 
   const addFeature = () => {
-    setProductData((prev) => ({
-      ...prev,
-      features: [...prev.features, ""],
-    }))
-  }
+    handleInputChange("features", [...productData.features, ""]);
+  };
 
   const removeFeature = (index: number) => {
     if (productData.features.length > 1) {
-      const updatedFeatures = productData.features.filter((_, i) => i !== index)
-      setProductData((prev) => ({
-        ...prev,
-        features: updatedFeatures,
-      }))
+      handleInputChange("features", productData.features.filter((_, i) => i !== index));
     }
-  }
+  };
+
+  const handleSpecificationChange = (key: keyof ProductData["specifications"], value: string) => {
+    handleInputChange("specifications", {
+      ...productData.specifications,
+      [key]: value,
+    });
+  };
 
   const calculateDiscount = () => {
     if (productData.price && productData.originalPrice) {
-      const price = Number.parseFloat(productData.price.replace(/[^0-9.]/g, ""))
-      const originalPrice = Number.parseFloat(productData.originalPrice.replace(/[^0-9.]/g, ""))
-      if (originalPrice > price) {
-        const discount = Math.round(((originalPrice - price) / originalPrice) * 100)
-        setProductData((prev) => ({ ...prev, discount }))
+      const price = Number.parseFloat(productData.price.replace(/[^0-9.]/g, "")) || 0;
+      const originalPrice = Number.parseFloat(productData.originalPrice.replace(/[^0-9.]/g, "")) || 0;
+      if (originalPrice > price && originalPrice > 0) {
+        const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
+        handleInputChange("discount", discount);
+      } else {
+        handleInputChange("discount", 0);
       }
+    } else {
+      handleInputChange("discount", 0);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
-    // Validation
     if (!productData.name || !productData.description || !productData.category) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields (Name, Description, Category)",
         variant: "destructive",
-      })
-      setIsLoading(false)
-      return
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (!productData.imageFile && !productData.videoFile && !productData.image) {
+      toast({
+        title: "Validation Error",
+        description: "Please upload an image or video, or provide a media URL",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
     }
 
     try {
-      // Filter out empty features
-      const filteredFeatures = productData.features.filter((feature) => feature.trim() !== "")
+      const formData = new FormData();
+      formData.append("name", productData.name);
+      formData.append("description", productData.description);
+      formData.append("category", productData.category);
+      if (productData.price) formData.append("price", productData.price);
+      if (productData.originalPrice) formData.append("originalPrice", productData.originalPrice);
+      if (productData.image) formData.append("image", productData.image);
+      if (productData.imageFile) formData.append("imageFile", productData.imageFile);
+      if (productData.videoFile) formData.append("videoFile", productData.videoFile);
+      if (productData.cloudinaryPublicId) formData.append("cloudinaryPublicId", productData.cloudinaryPublicId);
+      formData.append("features", JSON.stringify(productData.features.filter((f) => f.trim())));
+      formData.append("specifications", JSON.stringify(productData.specifications));
+      formData.append("featured", productData.featured.toString());
+      formData.append("inStock", productData.inStock.toString());
+      formData.append("discount", productData.discount.toString());
+      formData.append("rating", productData.rating.toString());
+      formData.append("reviews", productData.reviews.toString());
 
-      // Filter out empty specifications
-      const filteredSpecifications = Object.fromEntries(
-        Object.entries(productData.specifications).filter(([_, value]) => value.trim() !== ""),
-      )
+      const response = await fetch("/api/products/add", {
+        method: "POST",
+        body: formData,
+      });
 
-      const newProduct = {
-        id: Date.now().toString(),
-        ...productData,
-        features: filteredFeatures,
-        specifications: filteredSpecifications,
-        image: productData.imageUrl,
-        date: new Date().toISOString(),
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to add product");
       }
-
-      addProduct(newProduct)
 
       toast({
         title: "Success!",
         description: "Product has been added successfully",
-      })
+      });
 
-      // Reset form
-      setProductData({
-        name: "",
-        description: "",
-        category: "",
-        price: "",
-        originalPrice: "",
-        image: "",
-        imageUrl: "",
-        imageFile: null as File | null,
-        features: [""],
-        specifications: {
-          Dimensions: "",
-          Weight: "",
-          Power: "",
-          Capacity: "",
-          Material: "",
-          Warranty: "",
-        },
-        featured: false,
-        inStock: true,
-        discount: 0,
-        rating: 0,
-        reviews: 0,
-      })
-
-      // Redirect to products management
-      router.push("/admin/products")
-    } catch (error) {
+      router.push("/admin/products");
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add product. Please try again.",
+        description: error.message || "Failed to add product. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const mediaSection = (
+    <div className="space-y-2">
+      <Label htmlFor="media">Product Media (Image or Video)</Label>
+      <div className="flex gap-2">
+        <Input
+          id="media-url"
+          value={productData.image || ""}
+          onChange={(e) => handleInputChange("image", e.target.value || null)}
+          placeholder="https://res.cloudinary.com/your-cloud-name/..."
+          className="flex-1"
+          disabled={mediaLoading}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => document.getElementById("file-input")?.click()}
+          disabled={mediaLoading}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {mediaLoading ? "Uploading..." : "Upload Media"}
+        </Button>
+        {(productData.imageUrl || productData.videoUrl || productData.image) && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={handleRemoveMedia}
+            disabled={mediaLoading}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+        <input
+          id="file-input"
+          type="file"
+          accept={`${ALLOWED_IMAGE_TYPES.join(",")},${ALLOWED_VIDEO_TYPES.join(",")}`}
+          className="hidden"
+          onChange={handleFileChange}
+          disabled={mediaLoading}
+        />
+      </div>
+
+      {mediaError && <div className="mt-2 text-red-500 text-sm">{mediaError}</div>}
+
+      <div className="mt-2">
+        {mediaLoading ? (
+          <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-lg border">
+            <span className="text-gray-500">Loading...</span>
+          </div>
+        ) : productData.videoUrl ? (
+          <video
+            src={productData.videoUrl}
+            controls
+            className="w-32 h-32 object-cover rounded-lg border"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholder.svg?height=128&width=128";
+              setMediaError("Error loading video");
+            }}
+          />
+        ) : productData.imageUrl ? (
+          <img
+            src={productData.imageUrl}
+            alt="Preview"
+            className="w-32 h-32 object-cover rounded-lg border"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholder.svg?height=128&width=128";
+              setMediaError("Error loading image");
+            }}
+          />
+        ) : productData.image ? (
+          <img
+            src={productData.image}
+            alt="Product Media"
+            className="w-32 h-32 object-cover rounded-lg border"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholder.svg?height=128&width=128";
+              setMediaError("Error loading media");
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
 
   if (!user) {
     return (
       <div className="container px-4 py-12">
         <div className="text-center">Loading...</div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="container px-4 py-8 md:px-6 max-w-4xl">
       <div className="flex flex-col gap-6">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <Link href="/admin/products">
             <Button variant="outline" size="sm">
@@ -234,7 +480,6 @@ export default function AddProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -254,7 +499,6 @@ export default function AddProductPage() {
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="category">
                     Category <span className="text-red-500">*</span>
@@ -273,7 +517,6 @@ export default function AddProductPage() {
                   </Select>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="description">
                   Description <span className="text-red-500">*</span>
@@ -287,59 +530,10 @@ export default function AddProductPage() {
                   required
                 />
               </div>
-
-              <div className="space-y-2">
-  <Label htmlFor="image">Product Image</Label>
-  <div className="flex gap-2">
-    <Input
-      id="image-url"
-      value={productData.imageUrl || ""}
-      onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-      placeholder="https://example.com/image.jpg"
-      className="flex-1"
-    />
-    <Button type="button" variant="outline" onClick={() => document.getElementById('file-input')?.click()}>
-      <Upload className="h-4 w-4 mr-2" />
-      Upload
-    </Button>
-    <input
-      id="file-input"
-      type="file"
-      accept="image/*"
-      className="hidden"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          const imageUrl = URL.createObjectURL(file);
-          handleInputChange("imageFile", file); // store File object
-          handleInputChange("imageUrl", imageUrl); // for preview
-
-          const img = new Image();
-          img.src = imageUrl;
-          img.onload = () => URL.revokeObjectURL(imageUrl);
-        }
-      }}
-    />
-  </div>
-
-  {productData.imageUrl && (
-    <div className="mt-2">
-      <img
-        src={productData.imageUrl || "/placeholder.svg"}
-        alt="Preview"
-        className="w-32 h-32 object-cover rounded-lg border"
-        onError={(e) => {
-          e.currentTarget.src = "/placeholder.svg?height=128&width=128";
-        }}
-      />
-    </div>
-  )}
-</div>
-
+              {mediaSection}
             </CardContent>
           </Card>
 
-          {/* Pricing */}
           <Card>
             <CardHeader>
               <CardTitle>Pricing</CardTitle>
@@ -351,24 +545,22 @@ export default function AddProductPage() {
                   <Label htmlFor="price">Current Price</Label>
                   <Input
                     id="price"
-                    value={productData.price}
-                    onChange={(e) => handleInputChange("price", e.target.value)}
+                    value={productData.price || ""}
+                    onChange={(e) => handleInputChange("price", e.target.value || null)}
                     placeholder="$45,000"
                     onBlur={calculateDiscount}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="originalPrice">Original Price (Optional)</Label>
                   <Input
                     id="originalPrice"
-                    value={productData.originalPrice}
-                    onChange={(e) => handleInputChange("originalPrice", e.target.value)}
-                    placeholder="$52,000"
+                    value={productData.originalPrice || ""}
+                    onChange={(e) => handleInputChange("originalPrice", e.target.value || null)}
+                    placeholder="₦52,000"
                     onBlur={calculateDiscount}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label>Discount</Label>
                   <div className="flex items-center gap-2">
@@ -384,22 +576,20 @@ export default function AddProductPage() {
                   </div>
                 </div>
               </div>
-
               {productData.discount > 0 && (
                 <Badge className="bg-accent text-black">
                   {productData.discount}% OFF - Save{" "}
                   {productData.originalPrice &&
                     productData.price &&
-                    `$${(
+                    `$₦{(
                       Number.parseFloat(productData.originalPrice.replace(/[^0-9.]/g, "")) -
-                        Number.parseFloat(productData.price.replace(/[^0-9.]/g, ""))
+                      Number.parseFloat(productData.price.replace(/[^0-9.]/g, ""))
                     ).toLocaleString()}`}
                 </Badge>
               )}
             </CardContent>
           </Card>
 
-          {/* Features */}
           <Card>
             <CardHeader>
               <CardTitle>Product Features</CardTitle>
@@ -428,7 +618,6 @@ export default function AddProductPage() {
             </CardContent>
           </Card>
 
-          {/* Technical Specifications */}
           <Card>
             <CardHeader>
               <CardTitle>Technical Specifications</CardTitle>
@@ -442,7 +631,7 @@ export default function AddProductPage() {
                     <Input
                       id={`spec-${key}`}
                       value={value}
-                      onChange={(e) => handleSpecificationChange(key, e.target.value)}
+                      onChange={(e) => handleSpecificationChange(key as keyof ProductData["specifications"], e.target.value)}
                       placeholder={`Enter ${key.toLowerCase()}`}
                     />
                   </div>
@@ -451,7 +640,6 @@ export default function AddProductPage() {
             </CardContent>
           </Card>
 
-          {/* Product Settings */}
           <Card>
             <CardHeader>
               <CardTitle>Product Settings</CardTitle>
@@ -467,7 +655,6 @@ export default function AddProductPage() {
                   />
                   <Label htmlFor="featured">Featured Product</Label>
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="inStock"
@@ -477,7 +664,6 @@ export default function AddProductPage() {
                   <Label htmlFor="inStock">In Stock</Label>
                 </div>
               </div>
-
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="rating">Rating (0-5)</Label>
@@ -492,7 +678,6 @@ export default function AddProductPage() {
                     placeholder="4.5"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="reviews">Number of Reviews</Label>
                   <Input
@@ -508,9 +693,8 @@ export default function AddProductPage() {
             </CardContent>
           </Card>
 
-          {/* Submit Button */}
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
+            <Button type="submit" disabled={isLoading} onClick={handleSubmit} className="flex-1">
               {isLoading ? "Adding Product..." : "Add Product"}
             </Button>
             <Link href="/admin/products">
@@ -522,5 +706,5 @@ export default function AddProductPage() {
         </form>
       </div>
     </div>
-  )
+  );
 }

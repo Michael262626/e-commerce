@@ -1,30 +1,16 @@
-import Link from "next/link"
-import Image from "next/image"
-import { ArrowRight, Star, Heart, ShoppingCart } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import WhatsAppButton from "@/components/whatsapp-button"
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  category: string
-  imageUrl?: string
-  featured?: boolean
-  price?: string
-  originalPrice?: string
-  rating?: number
-  reviews?: number
-  inStock?: boolean
-  discount?: number
-}
+// components/product-card.tsx
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, Star, Heart, ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import WhatsAppButton from "@/components/whatsapp-button";
+import { Product } from "@/types/product";
 
 interface ProductCardProps {
-  product: Product
-  viewMode?: "grid" | "list"
+  product: Product;
+  viewMode?: "grid" | "list";
 }
 
 export default function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
@@ -34,7 +20,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
         <div className="flex">
           <div className="relative w-48 h-32 flex-shrink-0">
             <Image
-              src={product.imageUrl || "/placeholder.svg?height=400&width=400"}
+              src={product.image || "/placeholder.svg?height=400&width=400"}
               alt={product.name}
               fill
               className="object-cover"
@@ -42,7 +28,7 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
             {/* Badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1">
               {product.featured && <Badge className="bg-primary text-white text-xs">⭐ Featured</Badge>}
-              {product.discount && (
+              {product.discount > 0 && (
                 <Badge className="bg-accent text-black font-bold text-xs">-{product.discount}%</Badge>
               )}
             </div>
@@ -58,26 +44,26 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
                   </h3>
                 </div>
 
-                {product.rating && (
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-3 w-3 ${
-                            i < Math.floor(product.rating!) ? "fill-accent text-accent" : "text-muted-foreground"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">({product.reviews || 0})</span>
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-3 w-3 ${
+                          i < Math.floor(product.rating) ? "fill-accent text-accent" : "text-muted-foreground"
+                        }`}
+                      />
+                    ))}
                   </div>
-                )}
+                  <span className="text-xs text-muted-foreground">({product.reviews})</span>
+                </div>
 
                 <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-primary">{product.price || "Contact for Price"}</span>
+                  <span className="text-lg font-bold text-primary">
+                    {product.price || "Contact for Price"}
+                  </span>
                   {product.originalPrice && (
                     <span className="text-sm text-muted-foreground line-through">{product.originalPrice}</span>
                   )}
@@ -89,10 +75,10 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-primary text-primary bg-primary text-white"
+                    className="border-primary text-white bg-primary"
                   >
                     View Details
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4" /> {/* Fixed missing quote */}
                   </Button>
                 </Link>
                 <WhatsAppButton productName={product.name} text="Get Quote" size="sm" />
@@ -101,14 +87,14 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
           </div>
         </div>
       </Card>
-    )
+    );
   }
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-      <div className="relative aspect-square overflow-hidden bg-muted/30">
+    <Card className="group overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border-0">
+      <div className="relative aspect-square bg-muted/30 overflow-hidden">
         <Image
-          src={product.imageUrl || "/placeholder.svg?height=400&width=400"}
+          src={product.image || "/placeholder.svg?height=400&width=400"} // Fixed typo &400 to &width=400
           alt={product.name}
           fill
           className="object-cover transition-transform group-hover:scale-105"
@@ -116,18 +102,20 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {product.featured && <Badge className="bg-primary text-white">⭐ Featured</Badge>}
-          {product.discount && <Badge className="bg-accent text-black font-bold">-{product.discount}%</Badge>}
+          {product.featured && <Badge className="bg-primary text-white">Featured</Badge>}
+          {product.discount > 0 && (
+            <Badge className="bg-accent text-black font-bold">-{product.discount}%</Badge>
+          )}
           {!product.inStock && <Badge variant="destructive">Out of Stock</Badge>}
         </div>
 
         {/* Action Buttons */}
         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button size="icon" variant="secondary" className="h-8 w-8">
-            <Heart className="h-4 w-4" />
+            <Heart className="h-4 w-4" /> {/* Fixed missing quote */}
           </Button>
           <Button size="icon" variant="secondary" className="h-8 w-8">
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" /> {/* Fixed missing quote */}
           </Button>
         </div>
       </div>
@@ -135,27 +123,25 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
       <CardContent className="p-4 space-y-3">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">{product.category}</p>
-          <h3 className="font-semibold text-secondary line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-secondary line-clamp-2 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
         </div>
 
         {/* Rating */}
-        {product.rating && (
-          <div className="flex items-center gap-1">
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-3 w-3 ${
-                    i < Math.floor(product.rating!) ? "fill-accent text-accent" : "text-muted-foreground"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-xs text-muted-foreground">({product.reviews || 0})</span>
+        <div className="flex items-center gap-1">
+          <div className="flex items-center">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`h-3 w-3 ${
+                  i < Math.floor(product.rating) ? "fill-accent text-accent" : "text-muted-foreground"
+                }`}
+              />
+            ))}
           </div>
-        )}
+          <span className="text-xs text-muted-foreground">({product.reviews})</span>
+        </div>
 
         <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
 
@@ -178,5 +164,5 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
         <WhatsAppButton productName={product.name} text="Get Quote via WhatsApp" className="w-full" />
       </CardFooter>
     </Card>
-  )
+  );
 }

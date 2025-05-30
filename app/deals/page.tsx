@@ -1,16 +1,40 @@
-"use client"
+// app/deals/page.tsx
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import ProductCard from "@/components/product-card"
-import { getAllProducts } from "@/lib/products"
-import { Clock, Zap, Gift } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import ProductCard from "@/components/product-card";
+import { Product } from "@/types/product";
+import { Clock, Zap, Gift } from "lucide-react";
+import Link from "next/link";
 
 export default function DealsPage() {
-  const products = getAllProducts()
-  const discountedProducts = products.filter((product) => product.discount && product.discount > 0)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const response = await fetch("/api/products", {
+          next: { revalidate: 60 }, // Optional: Cache for 60 seconds
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const data: Product[] = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  const discountedProducts = products.filter((product) => product.discount > 0);
 
   return (
     <div className="container bg-white px-4 py-12 md:px-6 md:py-16">
@@ -104,7 +128,14 @@ export default function DealsPage() {
             </Link>
           </div>
 
-          {discountedProducts.length > 0 ? (
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <h3 className="text-xl font-semibold text-secondary mb-2">Loading Deals...</h3>
+                <p className="text-muted-foreground mb-4">Please wait while we fetch the latest offers.</p>
+              </CardContent>
+            </Card>
+          ) : discountedProducts.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {discountedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
@@ -124,5 +155,5 @@ export default function DealsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

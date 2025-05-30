@@ -1,7 +1,7 @@
 "use client"
 
-import { getProductCategories } from "@/lib/products"
 import CategoryCard from "@/components/category-card"
+import { getProductCategories } from "@/data/categoryData"
 
 export default function CategoriesPage() {
   const categories = getProductCategories()
