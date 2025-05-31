@@ -74,11 +74,11 @@ export default function ProductCard({ product, viewMode = "grid" }: ProductCardP
 
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-bold text-primary">
-                    {product.price ? `₦${Number.parseFloat(product.price).toLocaleString()}` : "Contact for Price"}
+                    {product.price ? `₦${(product.price)}` : "Contact for Price"}
                   </span>
                   {product.originalPrice && (
                     <span className="text-sm text-muted-foreground line-through">
-                      ₦{Number.parseFloat(product.originalPrice).toLocaleString()}
+                      ₦{(product.originalPrice)}
                     </span>
                   )}
                 </div>

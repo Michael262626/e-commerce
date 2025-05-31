@@ -17,16 +17,25 @@ export default function DealsPage() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const response = await fetch("/api/products", {
-          next: { revalidate: 60 }, // Optional: Cache for 60 seconds
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        const response = await fetch(`${baseUrl}/api/products/get`, {
+          next: { revalidate: 60 },
         });
         if (!response.ok) {
-          throw new Error("Failed to fetch products");
+          throw new Error(`Failed to fetch products: ${response.status}`);
         }
-        const data: Product[] = await response.json();
-        setProducts(data);
+        const data = await response.json();
+        console.log("Products response:", data);
+
+        if (!data.success || !Array.isArray(data.products)) {
+          console.warn("Invalid response format for products");
+          setProducts([]);
+        } else {
+          setProducts(data.products);
+        }
       } catch (error) {
         console.error("Error fetching products:", error);
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }

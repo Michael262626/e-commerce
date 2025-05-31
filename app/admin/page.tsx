@@ -1,3 +1,4 @@
+// app/admin/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,8 +19,9 @@ interface Product {
   category: string;
   price: string | null;
   originalPrice: string | null;
-  image: string | null;
+  imageUrl: string | null; // Renamed from image
   cloudinaryPublicId: string | null;
+  mediaType: "image" | "video" | null; // Added
   features: string[];
   specifications: Record<string, string>;
   featured: boolean;
@@ -30,12 +32,11 @@ interface Product {
   createdAt: Date;
 }
 
-// Define User interface (adjust based on getCurrentUser return value)
+// Define User interface
 interface User {
   id: string;
   name: string;
   email: string;
-  // Add other fields as needed
 }
 
 export default function AdminDashboard() {
@@ -60,18 +61,28 @@ export default function AdminDashboard() {
       setUser(currentUser);
 
       try {
-        const response = await fetch("/api/products");
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        const response = await fetch(`/api/products/get`);
         if (!response.ok) {
-          throw new Error("Failed to fetch products");
+          throw new Error(`Failed to fetch products: ${response.status}`);
         }
         const data = await response.json();
-        setProducts(data); // Set resolved products
+        console.log("Products response:", data);
+
+        if (!data.success || !Array.isArray(data.products)) {
+          console.warn("Invalid response format for products");
+          setProducts([]);
+        } else {
+          setProducts(data.products);
+        }
       } catch (error) {
+        console.error("Error fetching products:", error);
         toast({
           title: "Error",
           description: "Failed to load products. Please try again.",
           variant: "destructive",
         });
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }
@@ -247,6 +258,9 @@ export default function AdminDashboard() {
               {products.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No products found</p>
+                  {/* <Link href="/admin/products/add">
+                    <Button className="mt-4">Add New Product</Button>
+                  </Link> */}
                 </div>
               ) : (
                 products
@@ -258,7 +272,22 @@ export default function AdminDashboard() {
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                          <Package className="h-6 w-6 text-muted-foreground" />
+                        {product.mediaType === "video" && product.imageUrl ? (
+                            <video
+                              src={product.imageUrl}
+                              className="w-full h-full object-cover"
+                              muted
+                              loop
+                              autoPlay
+                              aria-label={`Video for ${product.name}`}
+                            />
+                          ) : (
+                            <img
+                              src={product.imageUrl || "/placeholder.png"}
+                              alt={product.name}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          )}
                         </div>
                         <div>
                           <h4 className="font-medium">{product.name}</h4>
