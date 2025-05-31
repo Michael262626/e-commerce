@@ -23,8 +23,9 @@ model Product {
   category        String
   price           String?
   originalPrice   String?
-  image           String?
+  imageUrl        String? // Renamed from image
   cloudinaryPublicId String?
+  mediaType       String? // "image" or "video"
   features        String[] @default([])
   specifications  Json?
   featured        Boolean  @default(false)

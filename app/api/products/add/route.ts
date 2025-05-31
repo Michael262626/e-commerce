@@ -12,6 +12,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
 const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
@@ -20,12 +21,12 @@ export async function POST(request: NextRequest) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const category = formData.get('category') as string;
-    const price = formData.get('price') as string | null; // Changed to null
-    const originalPrice = formData.get('originalPrice') as string | null; // Changed to null
-    const image = formData.get('image') as string | null; // Changed to null
+    const price = formData.get('price') as string | null;
+    const originalPrice = formData.get('originalPrice') as string | null;
+    const image = formData.get('image') as string | null;
     const imageFile = formData.get('imageFile') as File | null;
     const videoFile = formData.get('videoFile') as File | null;
-    const cloudinaryPublicId = formData.get('cloudinaryPublicId') as string | null; // Changed to null
+    const cloudinaryPublicId = formData.get('cloudinaryPublicId') as string | null;
     const features = JSON.parse(formData.get('features') as string) as string[];
     const specifications = JSON.parse(formData.get('specifications') as string) as Record<string, string>;
     const featured = formData.get('featured') === 'true';
@@ -38,13 +39,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
 
-    let mediaUrl = image;
+    let imageUrl = image;
     let publicId = cloudinaryPublicId || `product_${uuidv4()}`;
+    let mediaType: 'image' | 'video' | null = null;
 
     if (imageFile || videoFile) {
       const file = imageFile ?? videoFile;
       if (file) {
-        // Validate file type
         const isVideo = file.type.startsWith('video/');
         if (isVideo && !['video/mp4', 'video/webm'].includes(file.type)) {
           return NextResponse.json({ success: false, error: 'Invalid video format' }, { status: 400 });
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest) {
           uploadStream.end(fileBuffer);
         });
 
-        mediaUrl = result.secure_url;
+        imageUrl = result.secure_url;
         publicId = result.public_id;
+        mediaType = isVideo ? 'video' : 'image';
       }
     }
 
@@ -81,8 +83,9 @@ export async function POST(request: NextRequest) {
       category,
       price,
       originalPrice,
-      image: mediaUrl,
+      imageUrl,
       cloudinaryPublicId: publicId,
+      mediaType,
       features: features.filter((f: string) => f.trim() !== ''),
       specifications,
       featured,

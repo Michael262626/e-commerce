@@ -2,76 +2,152 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Phone } from "lucide-react";
+import { ArrowLeft, ChevronRight, Phone, Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import WhatsAppButton from "@/components/whatsapp-button";
 import ProductCard from "@/components/product-card";
 import { Product } from "@/types/product";
+import { Metadata } from "next";
 
 async function getProductById(id: string): Promise<Product | null> {
   try {
-    const response = await fetch(`http://localhost:3000/api/products/${id}`, {
-      next: { revalidate: 60 }, // Optional: Cache for 60 seconds
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    const response = await fetch(`${baseUrl}/api/products/get-id/${id}`, {
+      next: { revalidate: 60 },
     });
     if (!response.ok) {
       return null;
     }
-    return await response.json();
+    const data = await response.json();
+    if (!data.success || !data.product) {
+      return null;
+    }
+    return data.product;
   } catch (error) {
     console.error("Error fetching product:", error);
     return null;
   }
 }
 
-async function getRelatedProducts(id: string): Promise<Product[]> {
+async function getRelatedProducts(id: string, category: string): Promise<Product[]> {
   try {
-    const response = await fetch(`http://localhost:3000/api/products/related?excludeId=${id}`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    const response = await fetch(`${baseUrl}/api/products/related?excludeId=${id}&category=${encodeURIComponent(category)}`, {
       next: { revalidate: 60 },
     });
     if (!response.ok) {
       return [];
     }
-    return await response.json();
+    const data = await response.json();
+    if (!data.success || !Array.isArray(data.products)) {
+      return [];
+    }
+    return data.products;
   } catch (error) {
     console.error("Error fetching related products:", error);
     return [];
   }
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getProductById(id);
+
+  if (!product) {
+    return {
+      title: "Product Not Found",
+      description: "The requested product could not be found.",
+    };
+  }
+
+  return {
+    title: `${product.name} | Nylon Production Machinery`,
+    description: product.description.slice(0, 160) || `Explore ${product.name} for your nylon production needs.`,
+    openGraph: {
+      title: product.name,
+      description: product.description.slice(0, 160),
+      images: product.imageUrl ? [{ url: product.imageUrl, alt: product.name }] : [],
+    },
+  };
+}
+
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params; // Await params
-  const product = await getProductById(id); // Await product fetch
+  const { id } = await params;
+  const product = await getProductById(id);
 
   if (!product) {
     notFound();
   }
 
-  const relatedProducts = await getRelatedProducts(id); // Await related products
+  const relatedProducts = await getRelatedProducts(id, product.category);
 
   return (
     <div className="container px-4 py-12 md:px-6 md:py-16">
       <Link
         href="/products"
-        className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 mb-6"
+        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Products
       </Link>
 
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
-          <Image
-            src={product.image || "/placeholder.svg?height=600&width=600"} // Changed to image
-            alt={product.name}
-            fill
-            className="object-cover"
-          />
+        <div className="relative aspect-square overflow-hidden rounded-lg bg-muted/30">
+          {product.mediaType === "video" && product.imageUrl ? (
+            <video
+              src={product.imageUrl}
+              className="w-full h-full object-cover"
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+          ) : (
+            <Image
+              src={product.imageUrl || "/placeholder.svg?height=600&width=600"}
+              alt={product.name}
+              fill
+              className="object-cover"
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
           <div>
             <h1 className="text-3xl font-bold">{product.name}</h1>
-            <p className="text-lg text-gray-500 mt-2">{product.category}</p>
+            <p className="text-lg text-muted-foreground mt-2">{product.category}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-4 w-4 ${
+                    i < Math.floor(product.rating) ? "fill-accent text-accent" : "text-muted-foreground"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground">({product.reviews} reviews)</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-bold text-primary">
+              {product.price ? `₦${(product.price)}` : "Contact for Price"}
+            </span>
+            {product.originalPrice && (
+              <span className="text-lg text-muted-foreground line-through">
+                ₦{(product.originalPrice)}
+              </span>
+            )}
+            {product.discount > 0 && (
+              <Badge className="bg-accent text-black font-bold">- {product.discount}%</Badge>
+            )}
           </div>
 
           <Separator />
@@ -107,14 +183,15 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
           <div className="mt-6 flex flex-col gap-4">
             <p className="text-lg font-semibold">Interested in this machine?</p>
-            <p className="text-gray-500">
-              Contact us directly via WhatsApp to discuss pricing, customization options, and delivery details.
+            <p className="text-muted-foreground">
+              Contact us via WhatsApp for pricing, customization, and delivery details.
             </p>
-            <WhatsAppButton productName={product.name} />
-
-            <div className="flex items-center gap-2 mt-2">
-              <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-500">Or call us at: +234 8056112316</span>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <WhatsAppButton productName={product.name} className="flex-1" />
+              <Button variant="outline" className="flex-1">
+                <Phone className="mr-2 h-4 w-4" />
+                Call: +234 8056112316
+              </Button>
             </div>
           </div>
         </div>
@@ -126,7 +203,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <h2 className="text-2xl font-bold">Related Products</h2>
             <Link
               href="/products"
-              className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900"
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary"
             >
               View all
               <ChevronRight className="ml-1 h-4 w-4" />
@@ -134,8 +211,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {relatedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {relatedProducts.map((relatedProduct) => (
+              <ProductCard key={relatedProduct.id} product={relatedProduct} />
             ))}
           </div>
         </div>

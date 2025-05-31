@@ -1,19 +1,18 @@
-"use client"
+// app/page.tsx
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, ChevronRight, Phone, Truck, Shield, Headphones, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import ProductCard from "@/components/product-card";
+import CategoryCard from "@/components/category-card";
+import SearchBar from "@/components/search-bar";
+import { getFeaturedProducts } from "@/services/products";
+import { getProductCategories } from "@/data/categoryData";
 
-import Link from "next/link"
-import { ArrowRight, ChevronRight, Phone, Truck, Shield, Headphones, Award } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import ProductCard from "@/components/product-card"
-import CategoryCard from "@/components/category-card"
-import SearchBar from "@/components/search-bar"
-import { getFeaturedProducts } from "@/services/products"
-import { getProductCategories } from "@/data/categoryData"
-
-export default function Home() {
-  const featuredProducts = getFeaturedProducts()
-  const categories = getProductCategories()
+export default async function Home() {
+  const featuredProducts = await getFeaturedProducts();
+  const categories = await getProductCategories();
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -52,12 +51,12 @@ export default function Home() {
             </div>
             <div className="mx-auto lg:ml-auto flex justify-center">
               <div className="relative">
-                <img
+                <Image
                   alt="Industrial machinery"
                   className="aspect-video overflow-hidden rounded-2xl object-cover shadow-2xl float-animation"
-                  height="550"
+                  height={550}
                   src="/placeholder.svg?height=550&width=800"
-                  width="800"
+                  width={800}
                 />
                 <div className="absolute -bottom-4 -right-4 bg-accent text-black px-4 py-2 rounded-xl font-bold shadow-lg">
                   🎯 Best Prices Guaranteed!
@@ -114,9 +113,13 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              {featuredProducts.length > 0 ? (
+                featuredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))
+              ) : (
+                <p className="text-muted-foreground col-span-full text-center">No featured products available.</p>
+              )}
             </div>
             <div className="flex justify-center md:hidden">
               <Link href="/products">
@@ -194,26 +197,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Newsletter
-      <section className="w-full py-12 bg-white border-t">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="text-center md:text-left">
-              <h3 className="text-2xl font-bold text-secondary">Stay Updated</h3>
-              <p className="text-muted-foreground">Get the latest deals and product updates</p>
-            </div>
-            <div className="flex w-full max-w-md gap-2">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <Button className="px-6">Subscribe</Button>
-            </div>
-          </div>
-        </div>
-      </section> */}
     </div>
-  )
+  );
 }

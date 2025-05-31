@@ -1,21 +1,21 @@
 export interface Product {
-    id: string
-    name: string
-    description: string
-    category: string
-    image?: string | null
-    imageUrl?: string
-    imageFile?: File | null
-    features: string[]
-    specifications?: Record<string, string>
-    featured?: boolean
-    date?: string
-    price?: string | null
-    originalPrice?: string
-    rating: number
-    reviews?: number
-    inStock?: boolean
-    discount?: number 
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string | null;
+  originalPrice: string | null;
+  imageUrl: string | null;
+  cloudinaryPublicId: string | null;
+  mediaType: "image" | "video" | null;
+  features: string[];
+  specifications: Record<string, string>;
+  featured: boolean;
+  inStock: boolean;
+  discount: number;
+  rating: number;
+  reviews: number;
+  createdAt: Date; 
   }
   
   export interface Category {

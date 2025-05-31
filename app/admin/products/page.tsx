@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 
-// Define Product interface based on Prisma schema
 interface Product {
   id: string;
   name: string;
@@ -21,10 +20,8 @@ interface Product {
   price: string | null;
   originalPrice: string | null;
   imageUrl: string | null;
-  imageFile: File | null;
-  videoFile: File | null;
-  videoUrl: string;
   cloudinaryPublicId: string | null;
+  mediaType: "image" | "video" | null;
   features: string[];
   specifications: Record<string, string>;
   featured: boolean;
@@ -32,13 +29,15 @@ interface Product {
   discount: number;
   rating: number;
   reviews: number;
+  createdAt: Date;
 }
 
 export default function AdminProductsPage() {
-  const [user, setUser] = useState<any>(null); // TODO: Define User type
+  const [user, setUser] = useState<any>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -73,12 +72,14 @@ export default function AdminProductsPage() {
           description: error.message || "Failed to load products. Please try again.",
           variant: "destructive",
         });
-        setProducts([]); // Ensure products is an array on error
+        setProducts([]);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
     fetchData();
-  }, [router, toast])
+  }, [router, toast]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
@@ -86,27 +87,22 @@ export default function AdminProductsPage() {
     }
 
     try {
-      const response = await fetch(`/api/products/${id}`, {
+      const response = await fetch(`/api/products/delete/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
-        throw new Error("Failed to delete product");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete product");
       }
-      // Refetch products to update the list
-      const updatedResponse = await fetch("/api/products");
-      if (!updatedResponse.ok) {
-        throw new Error("Failed to refresh products");
-      }
-      const updatedData = await updatedResponse.json();
-      setProducts(updatedData);
+      setProducts(products.filter((p) => p.id !== id));
       toast({
         title: "Product Deleted",
         description: `${name} has been removed from the catalog`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to delete product. Please try again.",
+        description: error.message || "Failed to delete product. Please try again.",
         variant: "destructive",
       });
     }
@@ -120,19 +116,18 @@ export default function AdminProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = [...new Set(products.map((p) => p.category))];
+  const categories = ["all", ...new Set(products.map((p) => p.category))];
 
-  if (!user) {
+  if (loading || !user) {
     return <div className="container px-4 py-12">Loading...</div>;
   }
 
   return (
     <div className="container px-4 py-12 md:px-6 md:py-16">
       <div className="flex flex-col gap-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-secondary">Product Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
             <p className="text-muted-foreground">Manage your product catalog</p>
           </div>
           <Link href="/admin/products/add">
@@ -142,8 +137,6 @@ export default function AdminProductsPage() {
             </Button>
           </Link>
         </div>
-
-        {/* Filters */}
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-4">
@@ -159,10 +152,9 @@ export default function AdminProductsPage() {
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category}
+                      {category === "all" ? "All Categories" : category}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -170,8 +162,6 @@ export default function AdminProductsPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Products Table */}
         <Card>
           <CardHeader>
             <CardTitle>Products ({filteredProducts.length})</CardTitle>
@@ -191,11 +181,21 @@ export default function AdminProductsPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
-                        <img
-                          src={product.imageUrl || product.videoFile || "/placeholder.svg?height=64&width=64"}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {product.mediaType === "video" && product.imageUrl ? (
+                          <video
+                            src={product.imageUrl}
+                            className="w-full h-full object-cover"
+                            muted
+                            loop
+                            autoPlay
+                          />
+                        ) : (
+                          <img
+                            src={product.imageUrl || "/placeholder.svg?height=64&width=64"}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -207,7 +207,7 @@ export default function AdminProductsPage() {
                           <Badge variant={product.inStock ? "default" : "destructive"}>
                             {product.inStock ? "In Stock" : "Out of Stock"}
                           </Badge>
-                          {product.price && <Badge variant="outline">{product.price}</Badge>}
+                          {product.price && <Badge variant="outline">₦{product.price}</Badge>}
                         </div>
                       </div>
                     </div>

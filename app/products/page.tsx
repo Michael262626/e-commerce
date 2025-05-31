@@ -13,7 +13,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useToast } from "@/components/ui/use-toast";
 import ProductCard from "@/components/product-card";
 
-// Define Product interface based on Prisma schema
 interface Product {
   id: string;
   name: string;
@@ -21,8 +20,9 @@ interface Product {
   category: string;
   price: string | null;
   originalPrice: string | null;
-  image: string | null;
+  imageUrl: string | null;
   cloudinaryPublicId: string | null;
+  mediaType: "image" | "video" | null;
   features: string[];
   specifications: Record<string, string>;
   featured: boolean;
@@ -33,7 +33,6 @@ interface Product {
   createdAt: Date;
 }
 
-// Define Category interface
 interface Category {
   name: string;
   count: number;
@@ -44,38 +43,47 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 100000]);
+  const [priceRange, setPriceRange] = useState([0, 10000000]); // Adjusted for Naira
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch products and categories on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch products
-        const productsResponse = await fetch("/api/products");
+        const productsResponse = await fetch("/api/products/get");
         if (!productsResponse.ok) {
           throw new Error("Failed to fetch products");
         }
         const productsData = await productsResponse.json();
-        setProducts(productsData);
+        if (productsData.success && Array.isArray(productsData.products)) {
+          setProducts(productsData.products);
+        } else {
+          throw new Error("Invalid products response");
+        }
 
-        // Fetch categories
-        const categoriesResponse = await fetch("/api/products/categories");
+        // Fetch categories (assuming /api/categories exists)
+        const categoriesResponse = await fetch("/api/categories");
         if (!categoriesResponse.ok) {
           throw new Error("Failed to fetch categories");
         }
         const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData);
-      } catch (error) {
+        if (categoriesData.success && Array.isArray(categoriesData.categories)) {
+          setCategories(categoriesData.categories);
+        } else {
+          throw new Error("Invalid categories response");
+        }
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to load products or categories. Please try again.",
+          description: error.message || "Failed to load products or categories. Please try again.",
           variant: "destructive",
         });
+        setProducts([]);
+        setCategories([]);
       } finally {
         setIsLoading(false);
       }
@@ -84,10 +92,10 @@ export default function ProductsPage() {
     fetchData();
   }, [toast]);
 
-  // Filter and sort products
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return [];
+
     const filtered = products.filter((product: Product) => {
-      // Search filter
       if (
         searchQuery &&
         !product.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -96,20 +104,17 @@ export default function ProductsPage() {
         return false;
       }
 
-      // Category filter
       if (selectedCategories.length > 0 && !selectedCategories.includes(product.category)) {
         return false;
       }
 
-      // Stock filter
       if (inStockOnly && !product.inStock) {
         return false;
       }
 
-      // Price filter (extract numeric value from price string)
       if (product.price) {
-        const price = Number.parseInt(product.price.replace(/[^0-9]/g, ""));
-        if (price < priceRange[0] || price > priceRange[1]) {
+        const price = Number.parseFloat(product.price.replace(/[^0-9.]/g, ""));
+        if (isNaN(price) || price < priceRange[0] || price > priceRange[1]) {
           return false;
         }
       }
@@ -117,35 +122,35 @@ export default function ProductsPage() {
       return true;
     });
 
-    // Sort products
+    const sorted = [...filtered];
     switch (sortBy) {
       case "price-low":
-        filtered.sort((a: Product, b: Product) => {
-          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0;
-          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0;
+        sorted.sort((a: Product, b: Product) => {
+          const priceA = a.price ? Number.parseFloat(a.price.replace(/[^0-9.]/g, "")) : 0;
+          const priceB = b.price ? Number.parseFloat(b.price.replace(/[^0-9.]/g, "")) : 0;
           return priceA - priceB;
         });
         break;
       case "price-high":
-        filtered.sort((a: Product, b: Product) => {
-          const priceA = a.price ? Number.parseInt(a.price.replace(/[^0-9]/g, "")) : 0;
-          const priceB = b.price ? Number.parseInt(b.price.replace(/[^0-9]/g, "")) : 0;
+        sorted.sort((a: Product, b: Product) => {
+          const priceA = a.price ? Number.parseFloat(a.price.replace(/[^0-9.]/g, "")) : 0;
+          const priceB = b.price ? Number.parseFloat(b.price.replace(/[^0-9.]/g, "")) : 0;
           return priceB - priceA;
         });
         break;
       case "rating":
-        filtered.sort((a: Product, b: Product) => b.rating - a.rating);
+        sorted.sort((a: Product, b: Product) => b.rating - a.rating);
         break;
       case "newest":
-        filtered.sort((a: Product, b: Product) => {
+        sorted.sort((a: Product, b: Product) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         break;
       default:
-        filtered.sort((a: Product, b: Product) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        sorted.sort((a: Product, b: Product) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
 
-    return filtered;
+    return sorted;
   }, [products, searchQuery, selectedCategories, priceRange, sortBy, inStockOnly]);
 
   const handleCategoryChange = (category: string, checked: boolean) => {
@@ -158,7 +163,6 @@ export default function ProductsPage() {
 
   const FilterContent = () => (
     <div className="space-y-6">
-      {/* Search */}
       <div className="space-y-2">
         <Label>Search Products</Label>
         <Input
@@ -167,8 +171,6 @@ export default function ProductsPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
-
-      {/* Categories */}
       <div className="space-y-3">
         <Label>Categories</Label>
         <div className="space-y-2">
@@ -186,27 +188,23 @@ export default function ProductsPage() {
           ))}
         </div>
       </div>
-
-      {/* Price Range */}
       <div className="space-y-3">
-        <Label>Price Range</Label>
+        <Label>Price Range (₦)</Label>
         <div className="px-2">
           <Slider
             value={priceRange}
             onValueChange={setPriceRange}
-            max={100000}
+            max={10000000}
             min={0}
             step={1000}
             className="w-full"
           />
           <div className="flex justify-between text-sm text-muted-foreground mt-2">
-            <span>${priceRange[0].toLocaleString()}</span>
-            <span>${priceRange[1].toLocaleString()}</span>
+            <span>₦{priceRange[0].toLocaleString()}</span>
+            <span>₦{priceRange[1].toLocaleString()}</span>
           </div>
         </div>
       </div>
-
-      {/* Stock Filter */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="inStock"
@@ -217,15 +215,13 @@ export default function ProductsPage() {
           In Stock Only
         </Label>
       </div>
-
-      {/* Clear Filters */}
       <Button
         variant="outline"
         className="w-full"
         onClick={() => {
           setSearchQuery("");
           setSelectedCategories([]);
-          setPriceRange([0, 100000]);
+          setPriceRange([0, 10000000]);
           setInStockOnly(false);
         }}
       >
@@ -245,23 +241,20 @@ export default function ProductsPage() {
   return (
     <div className="container px-4 py-8 md:px-6">
       <div className="flex flex-col gap-6">
-        {/* Header */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-secondary">Nylon Production Machinery</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Nylon Production Machinery</h1>
               <p className="text-muted-foreground">
                 Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
               </p>
             </div>
-
             <div className="flex items-center gap-2">
-              {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] bg-white text-black">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent className="bg-white text-black">
+                <SelectContent>
                   <SelectItem value="featured">Featured</SelectItem>
                   <SelectItem value="newest">Newest</SelectItem>
                   <SelectItem value="price-low">Price: Low to High</SelectItem>
@@ -269,8 +262,6 @@ export default function ProductsPage() {
                   <SelectItem value="rating">Highest Rated</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* View Mode */}
               <div className="flex border rounded-md">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
@@ -289,8 +280,6 @@ export default function ProductsPage() {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-
-              {/* Mobile Filter */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="md:hidden">
@@ -310,9 +299,7 @@ export default function ProductsPage() {
             </div>
           </div>
         </div>
-
         <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
-          {/* Desktop Filters */}
           <Card className="hidden lg:block h-fit">
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -322,8 +309,6 @@ export default function ProductsPage() {
               <FilterContent />
             </CardContent>
           </Card>
-
-          {/* Products Grid */}
           <div>
             {filteredProducts.length === 0 ? (
               <div className="text-center py-12">
@@ -334,7 +319,7 @@ export default function ProductsPage() {
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCategories([]);
-                    setPriceRange([0, 100000]);
+                    setPriceRange([0, 10000000]);
                     setInStockOnly(false);
                   }}
                 >
