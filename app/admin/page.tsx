@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Factory, Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,8 +101,11 @@ export default function AdminDashboard() {
 
   if (isLoading || !user) {
     return (
-      <div className="container px-4 py-12 md:px-6 md:py-16">
-        <div className="text-center">Loading...</div>
+      <div className="container px-4 py-12 flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Factory className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-lg font-semibold text-primary">APP</span>
+        </div>
       </div>
     );
   }

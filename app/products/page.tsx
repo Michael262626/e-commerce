@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Filter, Grid, List, SlidersHorizontal } from "lucide-react";
+import { Factory, Filter, Grid, List, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -232,8 +232,11 @@ export default function ProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="container px-4 py-8 md:px-6">
-        <div className="text-center">Loading...</div>
+      <div className="container px-4 py-12 flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Factory className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-lg font-semibold text-primary">APP</span>
+        </div>
       </div>
     );
   }

@@ -1,9 +1,10 @@
+// app/admin/products/edit/[id]/page.tsx
 "use client";
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Upload, X } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -345,12 +346,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       formData.append("category", productData.category);
       if (productData.price) formData.append("price", productData.price);
       if (productData.originalPrice) formData.append("originalPrice", productData.originalPrice);
-      if (productData.imageUrl) formData.append("imageUrl", productData.imageUrl);
+      if (productData.imageUrl) formData.append("image", productData.imageUrl); // Changed from imageUrl to image to match backend
       if (productData.imageFile) formData.append("imageFile", productData.imageFile);
       if (productData.videoFile) formData.append("videoFile", productData.videoFile);
       if (productData.cloudinaryPublicId)
         formData.append("cloudinaryPublicId", productData.cloudinaryPublicId);
-      if (productData.mediaType) formData.append("mediaType", productData.mediaType);
       formData.append("features", JSON.stringify(productData.features.filter((f) => f.trim() !== "")));
       formData.append(
         "specifications",
@@ -470,9 +470,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   if (!user || !productData) {
     return (
-      <div className="container px-4 py-12">
-        <div className="text-center">
-          <div className="animate-pulse bg-muted h-6 w-24 mx-auto rounded"></div>
+      <div className="container px-4 py-12 flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Factory className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-lg font-semibold text-primary">APP</span>
         </div>
       </div>
     );

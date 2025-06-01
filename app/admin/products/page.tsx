@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit, Plus, Trash, Eye, Star } from "lucide-react";
+import { Edit, Plus, Trash, Eye, Star, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +119,14 @@ export default function AdminProductsPage() {
   const categories = ["all", ...new Set(products.map((p) => p.category))];
 
   if (loading || !user) {
-    return <div className="container px-4 py-12">Loading...</div>;
+    return (
+      <div className="container px-4 py-12 flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <Factory className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-lg font-semibold text-primary">APP</span>
+        </div>
+      </div>
+    );
   }
 
   return (

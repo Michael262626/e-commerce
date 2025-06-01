@@ -1,18 +1,40 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Factory, Menu, Phone, Search, ShoppingCart, User, Heart } from "lucide-react"
-
+import { getCurrentUser } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+}
 
 export default function Header() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const currentUser = getCurrentUser()
+      setUser(currentUser)
+    }
+    fetchUser()
+  }, [])
 
   const routes = [
     { href: "/", label: "Home" },
@@ -38,9 +60,7 @@ export default function Header() {
             </div>
             <div className="flex items-center gap-4">
               <span className="hidden md:inline">🚚 Free Delivery on Orders $50,000+</span>
-              <Link href="/auth/login" className="hover:text-accent">
-                Admin
-              </Link>
+              {/* Removed Admin link from here */}
             </div>
           </div>
         </div>
@@ -80,6 +100,15 @@ export default function Header() {
                       {route.label}
                     </Link>
                   ))}
+                  {user?.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className={`text-lg ${isActive("/admin") ? "font-medium text-primary" : "text-muted-foreground"}`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </nav>
               </div>
             </SheetContent>
@@ -111,8 +140,8 @@ export default function Header() {
             {/* Search - Desktop */}
             <div className="hidden lg:flex items-center gap-2">
               <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black" />
-              <Input placeholder="Search machinery..." className="pl-10 bg-white text-black w-64" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black" />
+                <Input placeholder="Search machinery..." className="pl-10 bg-white text-black w-64" />
               </div>
             </div>
 
@@ -122,12 +151,15 @@ export default function Header() {
               size="icon"
               className="relative hover:bg-accent focus:bg-accent active:bg-accent"
             >
-          <Heart className="h-5 w-5 text-black" />
-          <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
-            2 
-          </Badge>
-        </Button>
-            <Button variant="ghost" size="icon" className="relative hover:bg-accent focus:bg-accent active:bg-accent"
+              <Heart className="h-5 w-5 text-black" />
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
+                2
+              </Badge>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-accent focus:bg-accent active:bg-accent"
             >
               <ShoppingCart className="h-5 w-5 text-black" />
               <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
@@ -135,9 +167,38 @@ export default function Header() {
               </Badge>
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative hover:bg-accent focus:bg-accent active:bg-accent">
-              <User className="h-5 w-5 text-black" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative hover:bg-accent focus:bg-accent active:bg-accent"
+                >
+                  <User className="h-5 w-5 text-black" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {user ? (
+                  <>
+                    {/* <DropdownMenuItem asChild>
+                      <Link href="/profile">Profile</Link>
+                    </DropdownMenuItem> */}
+                    
+                      <DropdownMenuItem asChild>
+                        <Link href="/auth/login">Signin</Link>
+                      </DropdownMenuItem>
+                  
+                    {/* <DropdownMenuItem asChild>
+                      <Link href="/auth/logout">Logout</Link>
+                    </DropdownMenuItem> */}
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link href="/auth/login">Login</Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Link href="/contact">
               <Button size="sm" className="hidden md:flex">
