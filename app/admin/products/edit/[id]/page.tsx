@@ -364,7 +364,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       formData.append("rating", productData.rating.toString());
       formData.append("reviews", productData.reviews.toString());
 
-      const response = await fetch(`${baseUrl}/api/products/${id}`, {
+      const response = await fetch(`${baseUrl}/api/products/update/${id}`, {
         method: "PUT",
         body: formData,
       });

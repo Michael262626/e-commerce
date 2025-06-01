@@ -1,27 +1,15 @@
-// app/api/products/[id]/route.ts
+// app/api/products/delete/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import cloudinary from "@/lib/cloudinary";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: params.id}, // Exclude soft-deleted
-    });
-    if (!product) {
-      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
-    }
-    return NextResponse.json({ success: true, product }, { status: 200 });
-  } catch (error: any) {
-    console.error("Error fetching product:", error);
-    return NextResponse.json({ success: false, error: error.message || "Failed to fetch product" }, { status: 500 });
-  }
-}
+    // Resolve the params Promise
+    const { id } = await params;
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!product) {
@@ -37,7 +25,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     // Permanently delete the product
     await prisma.product.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true, message: "Product deleted successfully" }, { status: 200 });
