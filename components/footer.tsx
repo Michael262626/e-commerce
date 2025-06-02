@@ -54,11 +54,11 @@ export default function Footer() {
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <span className="text-muted-foreground">
-                  123 Industrial Parkway
+                  4 Irepodun Street
                   <br />
-                  Manufacturing District
+                  Olorunshogo Alabede Area
                   <br />
-                  New York, NY 10001
+                  Aboru, Lagos
                 </span>
               </li>
             </ul>
@@ -86,7 +86,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-12 border-t pt-6 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Industrial Machinery. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Alubarika Poly Product. All rights reserved.</p>
         </div>
       </div>
     </footer>
