@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ChevronRight, Phone, Truck, Shield, Headphones, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import image from "../public/Landing image.jpeg"
 import { Badge } from "@/components/ui/badge";
 import ProductCard from "@/components/product-card";
 import CategoryCard from "@/components/category-card";
@@ -55,7 +56,7 @@ export default async function Home() {
                   alt="Industrial machinery"
                   className="aspect-video overflow-hidden rounded-2xl object-cover shadow-2xl float-animation"
                   height={550}
-                  src="/placeholder.svg?height=550&width=800"
+                  src={image}
                   width={800}
                 />
                 <div className="absolute -bottom-4 -right-4 bg-accent text-black px-4 py-2 rounded-xl font-bold shadow-lg">
