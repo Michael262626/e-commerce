@@ -184,8 +184,8 @@ export default function Header() {
                       <Link href="/profile">Profile</Link>
                     </DropdownMenuItem> */}
                     
-                      <DropdownMenuItem asChild>
-                        <Link href="/auth/login">Signin</Link>
+                      <DropdownMenuItem asChild className="">
+                        <Link href="/auth/login">login</Link>
                       </DropdownMenuItem>
                   
                     {/* <DropdownMenuItem asChild>
